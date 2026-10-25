@@ -1,8 +1,12 @@
+<img src="icons/icon-192.png" width="96" height="96" alt="Quads Training icon">
+
 # Quads Training
 
 A browser version of the tile game Quads for practising against a computer opponent, or playing a friend on the same device. It's a single HTML file with no install or build step.
 
 **Play it:** https://cotcreate.github.io/Quads-Training/
+
+On a phone, open the link and use **Share → Add to Home Screen** to install it with its own icon, like an app.
 
 ## How to play
 

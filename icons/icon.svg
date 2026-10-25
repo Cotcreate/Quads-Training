@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#57534E"/><stop offset="1" stop-color="#3B3835"/></linearGradient>
+    <linearGradient id="wood" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100"><stop offset="0" stop-color="#E9CE9D"/><stop offset="1" stop-color="#D0AC76"/></linearGradient>
+    <linearGradient id="brown" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100"><stop offset="0" stop-color="#7E472B"/><stop offset="1" stop-color="#5A2E18"/></linearGradient>
+    <pattern id="v" patternUnits="userSpaceOnUse" x="6" y="0" width="11" height="100"><rect x="3.2" width="4.6" height="100" fill="#6B3820"/></pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/></filter>
+  </defs>
+  
+  <g transform="translate(62 62) scale(9)" filter="url(#shadow)">
+    <rect width="100" height="100" rx="4" fill="url(#wood)"/>
+    <polygon points="6,6 94,6 50,50" fill="url(#brown)" stroke="url(#brown)" stroke-width="0.4"/>
+    <polygon points="94,94 6,94 50,50" fill="url(#brown)" stroke="url(#brown)" stroke-width="0.4"/>
+    <polygon points="94,6 94,94 50,50" fill="url(#v)"/>
+    <polygon points="6,94 6,6 50,50" fill="url(#v)"/>
+    <rect x="0.5" y="0.5" width="99" height="99" rx="3.6" fill="none" stroke="rgba(255,240,215,0.35)" stroke-width="0.8"/>
+  </g>
+</svg>
