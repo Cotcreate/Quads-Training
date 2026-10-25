@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Practice the Quads tile game against a computer opponent at four levels, or pass and play with a friend.">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>Quads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Monoton&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: two seats either side of a slate board, like players across a table; rules underneath.
+   The board, trays and tiles are physical objects and keep their materials in both themes. */
+:root {
+  --paper: #E3E5E9;
+  --panel: #EEF0F3;
+  --ink: #14161B;
+  --muted: #59606C;
+  --rule: #C4C9D1;
+  --accent: #2A41C7;
+  --on-accent: #FFFFFF;
+  --veil: rgba(227, 229, 233, 0.8);
+  --plate: #4A4744;
+  --slot: #393633;
+  --slot-edge: #5A5651;
+  --mark-you: #A9B7FF;
+  --mark-them: #F59AB8;
+  --display: 'Monoton', 'Arial Black', Impact, sans-serif;
+  --body: 'Schibsted Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101217; --panel: #181B21; --ink: #E5E8EE; --muted: #9AA2AE; --rule: #2B2F38;
+    --accent: #93A2FF; --on-accent: #0D1020; --veil: rgba(16, 18, 23, 0.82);
+    --plate: #36332F; --slot: #282623; --slot-edge: #45413C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101217; --panel: #181B21; --ink: #E5E8EE; --muted: #9AA2AE; --rule: #2B2F38;
+  --accent: #93A2FF; --on-accent: #0D1020; --veil: rgba(16, 18, 23, 0.82);
+  --plate: #36332F; --slot: #282623; --slot-edge: #45413C;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.page {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 40px;
+}
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; margin-left: 6px; color: var(--muted); }
+
+/* ---------- Header ---------- */
+.top {
+  max-width: 1280px; margin: 0 auto; padding-block: 22px 20px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 32px;
+}
+.brand { display: flex; flex-direction: column; gap: 4px; }
+.logo { font-family: var(--display); font-weight: 400; font-size: clamp(42px, 6vw, 64px); line-height: 0.9; letter-spacing: 0.03em; margin: 0; }
+.tag { margin: 0; font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: flex-end; }
+.ctl { display: flex; flex-direction: column; gap: 6px; }
+.ctl-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ctl-label b { color: var(--ink); font-weight: 600; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--rule); border-radius: 9px; background: var(--panel); }
+.seg button { border: 0; background: transparent; padding: 6px 13px; min-height: 34px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; }
+.seg button:hover { background: var(--paper); }
+.seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); }
+.seg-num button { min-width: 38px; padding-inline: 8px; font-family: var(--mono); }
+.ctl-new { flex-direction: row; align-items: center; gap: 10px; }
+.queued { font-size: 12px; color: var(--muted); max-width: 16ch; line-height: 1.3; }
+
+.btn { border: 1px solid var(--rule); background: var(--panel); padding: 8px 14px; min-height: 38px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn:hover:not(:disabled) { border-color: var(--ink); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn-primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.btn-primary:hover:not(:disabled) { border-color: transparent; filter: brightness(1.08); }
+
+/* ---------- Table ---------- */
+.table {
+  max-width: 1280px; margin: 0 auto;
+  display: grid; gap: 24px; align-items: start;
+  grid-template-columns: minmax(200px, 236px) minmax(0, 1fr) minmax(270px, 310px);
+  grid-template-areas: "opp board you";
+}
+.seat-left { grid-area: opp; }
+.board-col { grid-area: board; }
+.seat-right { grid-area: you; }
+
+.seat { background: var(--panel); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.seat-head { display: flex; align-items: center; gap: 11px; }
+.chip { width: 26px; height: 26px; border-radius: 5px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3); }
+.chip.light { background: linear-gradient(135deg, #E6CA98, #D3B07B); }
+.chip.dark { background: linear-gradient(135deg, #7B4429, #5E3019); box-shadow: inset 0 0 0 3px #DDBE8C, inset 0 0 0 4px rgba(0,0,0,0.2); }
+.seat-name { font-weight: 700; font-size: 17px; line-height: 1.2; }
+.seat-sub { font-size: 13px; color: var(--muted); line-height: 1.3; }
+.thinking { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.thinking i { width: 38px; height: 9px; border-radius: 2px; background: repeating-linear-gradient(90deg, var(--ink) 0 3px, transparent 3px 6px); animation: slide 0.55s linear infinite; }
+@keyframes slide { to { background-position: 12px 0; } }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.stat { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.stat b { font-family: var(--mono); font-weight: 500; font-size: 22px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+
+.tray { background: var(--plate); border-radius: 8px; padding: 8px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
+.rt { aspect-ratio: 1; border: 0; padding: 0; background: var(--slot); border-radius: 3px; position: relative; display: block; box-shadow: inset 0 1px 2px rgba(0,0,0,0.35); }
+.rt .tsvg { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 3px; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.4)); }
+button.rt { cursor: pointer; }
+button.rt:hover:not(:disabled) { transform: translateY(-1px); }
+button.rt:disabled { cursor: default; }
+button.rt.locked { opacity: 0.35; }
+.rt.sel { outline: 3px solid var(--mark-you); outline-offset: 2px; z-index: 1; }
+button.rt:focus-visible { outline: 3px solid var(--mark-you); outline-offset: 2px; }
+.tray-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: -6px; }
+
+.hand { display: flex; gap: 14px; align-items: center; }
+.hand-plate { background: var(--plate); border-radius: 8px; padding: 8px; flex: none; }
+.hand-tile { width: 76px; height: 76px; background: var(--slot); border-radius: 4px; position: relative; border: 0; padding: 0; cursor: pointer; display: block; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); }
+.hand-tile:disabled { cursor: default; }
+.hand-tile .tsvg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
+.hand-info { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+.hand-title { font-weight: 700; font-size: 15px; line-height: 1.2; }
+.hand-desc { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tools .btn { flex: 1 1 0; }
+.toggles { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.toggle { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; line-height: 1.35; }
+.toggle input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--accent); flex: none; }
+
+/* ---------- Board ---------- */
+.board-col { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
+.status-row { width: min(100%, 600px); width: min(100%, 600px, max(320px, calc(100dvh - 220px))); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.status { margin: 0; font-weight: 600; font-size: 16px; text-wrap: balance; }
+.moveno { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.board-wrap { position: relative; width: min(100%, 600px); width: min(100%, 600px, max(320px, calc(100dvh - 220px))); }
+.board {
+  width: 100%; aspect-ratio: 1; background: var(--plate); border-radius: 12px; padding: clamp(6px, 2.2%, 14px);
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(6, minmax(0, 1fr)); gap: clamp(3px, 1.1%, 7px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 10px 30px -12px rgba(0,0,0,0.45);
+}
+.cell { position: relative; border: 0; padding: 0; background: var(--slot); border-radius: 4px; cursor: pointer; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), inset 0 -1px 0 var(--slot-edge); min-width: 0; min-height: 0; }
+.board.wait .cell { cursor: default; }
+.cell.filled { cursor: default; }
+.cell:focus-visible { outline: 3px solid var(--mark-you); outline-offset: 1px; z-index: 4; }
+.cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; }
+.cell.t-me::before { background: var(--mark-you); opacity: 0.45; }
+.cell.t-them::before { background: var(--mark-them); opacity: 0.45; }
+.cell.t-both::before { background: repeating-linear-gradient(135deg, var(--mark-you) 0 5px, var(--mark-them) 5px 10px); opacity: 0.38; }
+.cell.can::after { content: ""; position: absolute; inset: 37%; border-radius: 50%; border: 2.5px solid var(--mark-you); box-shadow: 0 0 0 1px rgba(0,0,0,0.3); pointer-events: none; }
+.cell.pend { box-shadow: inset 0 0 0 2px var(--mark-you), inset 0 2px 4px rgba(0,0,0,0.4); }
+.cell.hinted { box-shadow: inset 0 0 0 3px var(--mark-you); }
+.tile, .ghost { position: absolute; inset: 0; pointer-events: none; }
+.tile .tsvg, .ghost .tsvg { width: 100%; height: 100%; display: block; border-radius: 3px; }
+.tile .tsvg { filter: drop-shadow(0 2px 2.5px rgba(0,0,0,0.45)); }
+.tile.drop { animation: drop 0.24s ease-out; }
+@keyframes drop { from { transform: scale(1.14); opacity: 0; } }
+.ghost { z-index: 2; opacity: 0.82; }
+.ghost.ok { outline: 2px solid var(--mark-you); outline-offset: 2px; border-radius: 4px; }
+.ghost.bad { opacity: 0.62; }
+.ghost.hint { animation: pulse 0.9s ease-in-out infinite alternate; }
+@keyframes pulse { from { outline-offset: 2px; } to { outline-offset: 6px; } }
+.cell.last::after { content: ""; position: absolute; top: -4px; right: -4px; width: 11px; height: 11px; border-radius: 50%; z-index: 3; box-shadow: 0 0 0 2px var(--plate); }
+.cell.last-me::after { background: var(--mark-you); }
+.cell.last-them::after { background: var(--mark-them); }
+.badbar rect { fill: #FF4545; }
+.tsvg .frame { fill: none; stroke: rgba(40, 22, 10, 0.45); stroke-width: 1.2; }
+
+.note { margin: 0; min-height: 1.5em; font-size: 14px; color: var(--muted); text-align: center; width: min(100%, 600px); text-wrap: balance; }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; font-size: 13px; color: var(--muted); }
+.legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25); }
+.sw-me { background: var(--mark-you); }
+.sw-them { background: var(--mark-them); }
+.sw-both { background: repeating-linear-gradient(135deg, var(--mark-you) 0 3px, var(--mark-them) 3px 6px); }
+
+.result { position: absolute; inset: 0; display: grid; place-items: center; background: var(--veil); border-radius: 12px; padding: 16px; z-index: 5; }
+.result-card { background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 24px 26px; text-align: center; max-width: 360px; display: flex; flex-direction: column; gap: 10px; align-items: center; box-shadow: 0 18px 40px -16px rgba(0,0,0,0.5); }
+.result-title { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 5.5vw, 46px); line-height: 1.05; margin: 0; letter-spacing: 0.02em; }
+.result-sub { margin: 0; color: var(--muted); font-size: 14px; text-wrap: balance; }
+.result-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+
+/* ---------- Rules ---------- */
+.rules { max-width: 1280px; margin: 40px auto 0; border-top: 1px solid var(--rule); padding-top: 28px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px 48px; }
+.rules h2 { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 12px; color: var(--muted); }
+.rules ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; max-width: 62ch; }
+.rules ol li::marker { font-family: var(--mono); color: var(--muted); }
+.rules p { margin: 0 0 10px; max-width: 62ch; }
+.house { margin-top: 16px !important; padding: 10px 14px; border: 1px dashed var(--rule); border-radius: 8px; font-size: 14px; }
+.joins { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.join { display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.35; }
+.pair { display: flex; align-items: center; gap: 10px; }
+.pair-tiles { display: flex; gap: 2px; background: var(--plate); padding: 5px; border-radius: 6px; }
+.pair-tiles .tsvg { width: 44px; height: 44px; display: block; }
+.verdict { font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--rule); }
+.verdict.yes { color: var(--ink); }
+.verdict.no { color: var(--muted); text-decoration: line-through; }
+.levels { margin-top: 22px; }
+.levels dl { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; font-size: 14px; }
+.levels dt { font-family: var(--mono); font-weight: 500; }
+.levels dd { margin: 0; color: var(--muted); }
+.foot { max-width: 1280px; margin: 32px auto 0; font-size: 12px; color: var(--muted); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1179px) {
+  .table { grid-template-columns: minmax(0, 1fr) minmax(270px, 310px); grid-template-areas: "opp opp" "board you"; }
+  .seat-left { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 12px 24px; }
+  .seat-left .stats { border-top: 0; padding-top: 0; }
+  .seat-left .tray-wrap { grid-column: 1 / -1; max-width: 760px; }
+  .seat-left .tray { grid-template-columns: repeat(18, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .table { grid-template-columns: minmax(0, 1fr); grid-template-areas: "opp" "board" "you"; gap: 16px; }
+  .seat-left { grid-template-columns: minmax(0, 1fr); }
+  .seat-left .tray { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+  .rules { grid-template-columns: minmax(0, 1fr); }
+  .top { padding-block: 16px 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .thinking i, .tile.drop, .ghost.hint { animation: none; }
+  button.rt:hover:not(:disabled) { transform: none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="q-wood" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100">
+      <stop offset="0" stop-color="#E7CB99"/><stop offset="1" stop-color="#D2AF7A"/>
+    </linearGradient>
+    <linearGradient id="q-brown" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="100">
+      <stop offset="0" stop-color="#7C452A"/><stop offset="1" stop-color="#5C2F19"/>
+    </linearGradient>
+    <pattern id="q-h" patternUnits="userSpaceOnUse" x="0" y="6" width="100" height="11">
+      <rect y="3.2" width="100" height="4.6" fill="#6B3820"/>
+    </pattern>
+    <pattern id="q-v" patternUnits="userSpaceOnUse" x="6" y="0" width="11" height="100">
+      <rect x="3.2" width="4.6" height="100" fill="#6B3820"/>
+    </pattern>
+  </defs>
+</svg>
+
+<div class="page">
+  <header class="top">
+    <div class="brand">
+      <h1 class="logo">QUADS</h1>
+      <p class="tag">Practice table · 6 × 6 board · 2 players</p>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label" id="lbl-mode">Opponent</span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-mode" id="seg-mode">
+          <button type="button" role="radio" data-v="ai">Computer</button>
+          <button type="button" role="radio" data-v="friend">Friend</button>
+        </div>
+      </div>
+      <div class="ctl" id="ctl-level">
+        <span class="ctl-label" id="lbl-level">Level · <b id="level-name">Casual</b></span>
+        <div class="seg seg-num" role="radiogroup" aria-labelledby="lbl-level" id="seg-level">
+          <button type="button" role="radio" data-v="1">1</button>
+          <button type="button" role="radio" data-v="2">2</button>
+          <button type="button" role="radio" data-v="3">3</button>
+          <button type="button" role="radio" data-v="4">4</button>
+        </div>
+      </div>
+      <div class="ctl" id="ctl-side">
+        <span class="ctl-label" id="lbl-side">You play</span>
+        <div class="seg" role="radiogroup" aria-labelledby="lbl-side" id="seg-side">
+          <button type="button" role="radio" data-v="0">Light · 1st</button>
+          <button type="button" role="radio" data-v="1">Dark · 2nd</button>
+        </div>
+      </div>
+      <div class="ctl ctl-new">
+        <button type="button" class="btn btn-primary" id="btn-new">New game</button>
+        <span class="queued" id="queued" hidden>Applies when you start a new game</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="table">
+    <section class="seat seat-left" aria-label="Opponent">
+      <div class="seat-head">
+        <span class="chip" id="l-chip"></span>
+        <div>
+          <div class="seat-name" id="l-name">Computer</div>
+          <div class="seat-sub" id="l-sub"></div>
+        </div>
+        <span class="thinking" id="l-thinking" hidden><i></i>Thinking</span>
+      </div>
+      <div class="stats" id="l-stats"></div>
+      <div class="tray-wrap">
+        <div class="tray" id="l-tray" aria-label="Opponent's tiles"></div>
+      </div>
+    </section>
+
+    <section class="board-col" aria-label="Board">
+      <div class="status-row">
+        <p class="status" id="status" aria-live="polite"></p>
+        <span class="moveno" id="moveno"></span>
+      </div>
+      <div class="board-wrap">
+        <div class="board" id="board"></div>
+        <div class="result" id="result" hidden>
+          <div class="result-card" role="dialog" aria-labelledby="result-title">
+            <h2 class="result-title" id="result-title">You win</h2>
+            <p class="result-sub" id="result-sub"></p>
+            <div class="result-actions">
+              <button type="button" class="btn btn-primary" id="btn-again">Play again</button>
+              <button type="button" class="btn" id="btn-review">Look at the board</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note" id="note" aria-live="polite"></p>
+      <div class="legend" id="legend" hidden>
+        <span><i class="sw sw-me"></i><span id="lg-me">Only you can fill</span></span>
+        <span><i class="sw sw-them"></i><span id="lg-them">Only the computer</span></span>
+        <span><i class="sw sw-both"></i>Either player</span>
+      </div>
+    </section>
+
+    <section class="seat seat-right" aria-label="Your tiles">
+      <div class="seat-head">
+        <span class="chip" id="r-chip"></span>
+        <div>
+          <div class="seat-name" id="r-name">You</div>
+          <div class="seat-sub" id="r-sub"></div>
+        </div>
+      </div>
+      <div class="stats" id="r-stats"></div>
+      <div class="hand">
+        <div class="hand-plate"><button type="button" class="hand-tile" id="hand-tile" aria-label="Rotate the tile in hand"></button></div>
+        <div class="hand-info">
+          <div class="hand-title" id="hand-title">No tile in hand</div>
+          <div class="hand-desc" id="hand-desc"></div>
+          <button type="button" class="btn" id="btn-rotate">Rotate<kbd>R</kbd></button>
+        </div>
+      </div>
+      <div class="tray-label">Your rack</div>
+      <div class="tray" id="r-tray"></div>
+      <div class="tools">
+        <button type="button" class="btn" id="btn-hint">Hint</button>
+        <button type="button" class="btn" id="btn-undo">Undo</button>
+      </div>
+      <div class="toggles">
+        <label class="toggle"><input type="checkbox" id="opt-legal"><span>Mark the squares your tile fits</span></label>
+        <label class="toggle"><input type="checkbox" id="opt-terr"><span>Show who can still fill each square</span></label>
+      </div>
+    </section>
+  </main>
+
+  <section class="rules" aria-label="Rules">
+    <div>
+      <h2>How to play</h2>
+      <ol>
+        <li>Each player has 17 tiles in their colour plus one starting tile: Light's is the concentric squares, Dark's is the cross. Every side of a tile is either solid colour or stripes.</li>
+        <li>Light starts. Each player's first move is their starting tile, placed on any of the 16 inner squares. Starting tiles can't go on the edge of the board, and there must be at least one empty square between them: they can't touch, not even at the corners.</li>
+        <li>After that, place one tile per turn on an empty square next to a tile already on the board. You can turn tiles to any rotation.</li>
+        <li>Every side that touches another tile must match it: stripes against stripes running the same way, or solid against the same solid colour.</li>
+        <li>If you can't place a tile on your turn, you lose. The last player to place a tile wins.</li>
+      </ol>
+      <p class="house"><strong>House rule:</strong> tiles on the edge of the board don't need to match the border. Only sides that touch another tile count.</p>
+      <div class="levels">
+        <h2>Computer levels</h2>
+        <dl>
+          <dt>1 Novice</dt><dd>Plays almost any legal tile. Good for learning the joins.</dd>
+          <dt>2 Casual</dt><dd>Looks one move ahead and makes mistakes.</dd>
+          <dt>3 Skilled</dt><dd>Checks your best reply before it plays.</dd>
+          <dt>4 Expert</dt><dd>Searches several moves deep and blocks hard.</dd>
+        </dl>
+      </div>
+    </div>
+    <div>
+      <h2>Reading the joins</h2>
+      <p>A solid side facing an empty square claims it: only tiles of that colour can go there. Use your colour to shut squares to your opponent and keep some for yourself.</p>
+      <div class="joins" id="joins"></div>
+    </div>
+  </section>
+  <p class="foot">Fan-made practice version of Quads, the 1996 tile game designed by Kris Burm. Not affiliated with the designer or publisher.</p>
+</div>
+
+<script id="quads-engine">
+/* Quads engine: rules, move generation, evaluation and search.
+   Edge codes (absolute, as drawn on the board): 0 light, 1 dark, 2 horizontal lines, 3 vertical lines, 4 free.
+   Two touching edges must carry the same code. The board border places no constraint (house rule). */
+var Q = (function () {
+  var N = 6, NC = 36, FREE = 4, NEUTRAL = 17, NEUTRAL_BIT = 1 << 17, ALL = (1 << 18) - 1;
+  var WIN = 100000;
+
+  // Relative edge types on a tile: C = player's colour, P = lines parallel to that edge, X = lines across it.
+  function absCode(rel, side, colour) {
+    if (rel === 'C') return colour;
+    var horizEdge = side === 0 || side === 2;
+    if (rel === 'P') return horizEdge ? 2 : 3;
+    return horizEdge ? 3 : 2;
+  }
+  function rot(r) { return [r[3], r[0], r[1], r[2]]; }
+
+  // The 17 tile designs: every rotation class with at least one coloured side and at least one lined side.
+  var seen = {}, CLASSES = [];
+  var sym = ['C', 'P', 'X'];
+  for (var i = 0; i < 81; i++) {
+    var r = [sym[i % 3], sym[(i / 3 | 0) % 3], sym[(i / 9 | 0) % 3], sym[(i / 27 | 0) % 3]];
+    var nc = r.filter(function (x) { return x === 'C'; }).length;
+    if (nc === 0 || nc === 4) continue;
+    var forms = [], cur = r;
+    for (var k = 0; k < 4; k++) { forms.push(cur.join('')); cur = rot(cur); }
+    var canon = forms.slice().sort()[0];
+    if (seen[canon]) continue;
+    seen[canon] = 1;
+    CLASSES.push(canon.split(''));
+  }
+  CLASSES.sort(function (a, b) {
+    var ca = a.filter(function (x) { return x === 'C'; }).length, cb = b.filter(function (x) { return x === 'C'; }).length;
+    return ca - cb || (a.join('') < b.join('') ? -1 : 1);
+  });
+  // Neutral tiles from the wooden set: Light's is concentric squares, Dark's is a cross.
+  var NEUTRAL_REL = [['P', 'P', 'P', 'P'], ['X', 'X', 'X', 'X']];
+
+  // Orientation table. OE[o*4+side] edge code, OP[o] owner, OT[o] tile index, OR[o] rotation count.
+  var OE = [], OP = [], OT = [], OR = [];
+  var orientsOf = [[], []];
+  for (var p = 0; p < 2; p++) {
+    for (var t = 0; t <= NEUTRAL; t++) {
+      var rel = t === NEUTRAL ? NEUTRAL_REL[p] : CLASSES[t];
+      var keys = {}, list = [], cr = rel;
+      for (var q = 0; q < 4; q++) {
+        var e = [0, 1, 2, 3].map(function (s) { return absCode(cr[s], s, p); });
+        var key = e.join('');
+        if (!keys[key]) {
+          keys[key] = 1;
+          var o = OP.length;
+          OE.push(e[0], e[1], e[2], e[3]); OP.push(p); OT.push(t); OR.push(q);
+          list.push(o);
+        }
+        cr = rot(cr);
+      }
+      orientsOf[p].push(list);
+    }
+  }
+  OE = Int8Array.from(OE);
+
+  // Lookup: for a constraint pattern (5^4), which tiles fit and which orientations fit.
+  var fitMask = [new Int32Array(625), new Int32Array(625)];
+  var fitOrients = [[], []];
+  for (p = 0; p < 2; p++) for (i = 0; i < 625; i++) fitOrients[p].push([]);
+  for (o = 0; o < OP.length; o++) {
+    for (var s = 0; s < 16; s++) {
+      var pat = 0;
+      for (var side = 0; side < 4; side++) pat = pat * 5 + ((s >> side) & 1 ? OE[o * 4 + side] : FREE);
+      fitMask[OP[o]][pat] |= 1 << OT[o];
+      fitOrients[OP[o]][pat].push(o);
+    }
+  }
+
+  var NB = new Int8Array(NC * 4);
+  var EDGE = new Uint8Array(NC); // outer ring of squares: starting tiles may not go there
+  for (var c = 0; c < NC; c++) {
+    var row = c / N | 0, col = c % N;
+    EDGE[c] = row === 0 || row === N - 1 || col === 0 || col === N - 1 ? 1 : 0;
+    NB[c * 4] = row > 0 ? c - N : -1;
+    NB[c * 4 + 1] = col < N - 1 ? c + 1 : -1;
+    NB[c * 4 + 2] = row < N - 1 ? c + N : -1;
+    NB[c * 4 + 3] = col > 0 ? c - 1 : -1;
+  }
+  // The eight squares around each square, corners included.
+  var AROUND = [];
+  for (c = 0; c < NC; c++) {
+    var ring = [], r0 = c / N | 0, c0 = c % N;
+    for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+      var rr = r0 + dr, cc = c0 + dc;
+      if ((dr || dc) && rr >= 0 && rr < N && cc >= 0 && cc < N) ring.push(rr * N + cc);
+    }
+    AROUND.push(ring);
+  }
+  // Starting tiles need a one-square gap between them, so none may sit next to another tile, even at a corner.
+  function nearTile(cells, c) {
+    for (var i = 0; i < AROUND[c].length; i++) if (cells[AROUND[c][i]] >= 0) return true;
+    return false;
+  }
+  var OPP = [2, 3, 0, 1];
+
+  function newState() {
+    var cells = new Int16Array(NC); cells.fill(-1);
+    return { cells: cells, hand: [ALL, ALL], toMove: 0 };
+  }
+  function cloneState(st) {
+    return { cells: Int16Array.from(st.cells), hand: st.hand.slice(), toMove: st.toMove };
+  }
+
+  // Pattern for cell c, or -1 if it has no occupied neighbour.
+  function patternAt(cells, c) {
+    var pat = 0, any = false;
+    for (var s = 0; s < 4; s++) {
+      var n = NB[c * 4 + s], code = FREE;
+      if (n >= 0 && cells[n] >= 0) { code = OE[cells[n] * 4 + OPP[s]]; any = true; }
+      pat = pat * 5 + code;
+    }
+    return any ? pat : -1 - pat; // negative encodes "isolated" while keeping the pattern recoverable
+  }
+
+  function genMoves(st) {
+    var p = st.toMove, hand = st.hand[p], cells = st.cells, out = [];
+    if (hand & NEUTRAL_BIT) {
+      for (var c = 0; c < NC; c++) {
+        if (cells[c] >= 0 || EDGE[c] || nearTile(cells, c)) continue;
+        var pt = patternAt(cells, c);
+        if (pt < 0) pt = -1 - pt;
+        var fo = fitOrients[p][pt];
+        for (var j = 0; j < fo.length; j++) if (OT[fo[j]] === NEUTRAL) out.push(fo[j] * 64 + c);
+      }
+      return out;
+    }
+    for (c = 0; c < NC; c++) {
+      if (cells[c] >= 0) continue;
+      pt = patternAt(cells, c);
+      if (pt < 0 || !(fitMask[p][pt] & hand)) continue;
+      fo = fitOrients[p][pt];
+      for (j = 0; j < fo.length; j++) if (hand & (1 << OT[fo[j]])) out.push(fo[j] * 64 + c);
+    }
+    return out;
+  }
+
+  function make(st, m) {
+    var c = m & 63, o = m >> 6;
+    st.cells[c] = o;
+    st.hand[st.toMove] &= ~(1 << OT[o]);
+    st.toMove ^= 1;
+  }
+  function unmake(st, m) {
+    var c = m & 63, o = m >> 6;
+    st.toMove ^= 1;
+    st.hand[st.toMove] |= 1 << OT[o];
+    st.cells[c] = -1;
+  }
+
+  function popcount(x) { x -= (x >> 1) & 0x55555555; x = (x & 0x33333333) + ((x >> 2) & 0x33333333); return (((x + (x >> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24; }
+
+  // Who can still fill which empty square. Used for the overlay and by the evaluation.
+  function territory(st) {
+    var cells = st.cells, res = { can: [[], []], counts: [0, 0], only: [0, 0], flex: [0, 0], union: [0, 0] };
+    for (var c = 0; c < NC; c++) {
+      res.can[0][c] = res.can[1][c] = false;
+      if (cells[c] >= 0) continue;
+      var pt = patternAt(cells, c);
+      if (pt < 0) continue;
+      var m0 = fitMask[0][pt] & st.hand[0] & ~NEUTRAL_BIT, m1 = fitMask[1][pt] & st.hand[1] & ~NEUTRAL_BIT;
+      if (m0) { res.can[0][c] = true; res.counts[0]++; res.flex[0] += popcount(m0); res.union[0] |= m0; if (!m1) res.only[0]++; }
+      if (m1) { res.can[1][c] = true; res.counts[1]++; res.flex[1] += popcount(m1); res.union[1] |= m1; if (!m0) res.only[1]++; }
+    }
+    return res;
+  }
+
+  // Score for the side to move.
+  function evaluate(st) {
+    var p = st.toMove, q = p ^ 1;
+    if ((st.hand[0] | st.hand[1]) & NEUTRAL_BIT) return 0;
+    var cells = st.cells, hp = st.hand[p], hq = st.hand[q];
+    var cP = 0, cQ = 0, oP = 0, oQ = 0, fP = 0, fQ = 0, uP = 0, uQ = 0;
+    for (var c = 0; c < NC; c++) {
+      if (cells[c] >= 0) continue;
+      var pt = patternAt(cells, c);
+      if (pt < 0) continue;
+      var mp = fitMask[p][pt] & hp, mq = fitMask[q][pt] & hq;
+      if (mp) { cP++; fP += popcount(mp); uP |= mp; if (!mq) oP++; }
+      if (mq) { cQ++; fQ += popcount(mq); uQ |= mq; if (!mp) oQ++; }
+    }
+    if (!cP) return -WIN / 2;
+    return 14 * (oP - oQ) + 5 * (cP - cQ) + 0.6 * (fP - fQ) + 2.5 * (popcount(uP) - popcount(uQ)) + 2;
+  }
+
+  // Keep the best moves, at most `perCell` of them on any one square, so the beam covers different squares.
+  function orderMoves(st, moves, limit, perCell) {
+    var scored = [];
+    for (var i = 0; i < moves.length; i++) {
+      make(st, moves[i]);
+      var v = -evaluate(st);
+      unmake(st, moves[i]);
+      scored.push([v, moves[i]]);
+    }
+    scored.sort(function (a, b) { return b[0] - a[0]; });
+    if (!limit || scored.length <= limit) return scored.map(function (x) { return x[1]; });
+    var out = [], per = {};
+    for (i = 0; i < scored.length && out.length < limit; i++) {
+      var c = scored[i][1] & 63;
+      per[c] = (per[c] || 0) + 1;
+      if (per[c] <= perCell) out.push(scored[i][1]);
+    }
+    return out;
+  }
+
+  function Timeout() {}
+
+  function negamax(st, depth, alpha, beta, ply, ctx) {
+    if ((++ctx.nodes & 255) === 0 && ctx.deadline && Date.now() > ctx.deadline) throw new Timeout();
+    var moves = genMoves(st);
+    if (!moves.length) return -WIN + ply;
+    if (depth === 0) return evaluate(st);
+    var beam = ctx.beams[Math.min(ply, ctx.beams.length - 1)];
+    if (depth >= 2 || moves.length > beam) moves = orderMoves(st, moves, beam, 3);
+    var best = -Infinity;
+    for (var i = 0; i < moves.length; i++) {
+      make(st, moves[i]);
+      var v = -negamax(st, depth - 1, -beta, -alpha, ply + 1, ctx);
+      unmake(st, moves[i]);
+      if (v > best) best = v;
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+
+  function rootSearch(st, depth, rootMoves, ctx, noise) {
+    var scores = [], alpha = -Infinity;
+    for (var i = 0; i < rootMoves.length; i++) {
+      make(st, rootMoves[i]);
+      var v = -negamax(st, depth - 1, -Infinity, noise ? Infinity : -alpha, 1, ctx);
+      unmake(st, rootMoves[i]);
+      if (noise) v += (Math.random() - 0.5) * noise;
+      scores.push([v, rootMoves[i]]);
+      if (v > alpha) alpha = v;
+    }
+    scores.sort(function (a, b) { return b[0] - a[0]; });
+    return scores;
+  }
+
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // Opening neutral tile for the first player: somewhere in the middle 4x4.
+  function openingMove(st, moves) {
+    var central = moves.filter(function (m) {
+      var c = m & 63, r = c / N | 0, k = c % N;
+      return r >= 1 && r <= 4 && k >= 1 && k <= 4;
+    });
+    return pick(central.length ? central : moves);
+  }
+
+  var LEVELS = {
+    1: { name: 'Novice' },
+    2: { name: 'Casual' },
+    3: { name: 'Skilled' },
+    4: { name: 'Expert' }
+  };
+
+  function chooseMove(stIn, level, timeMs) {
+    var st = cloneState(stIn);
+    var moves = genMoves(st);
+    if (!moves.length) return { move: -1 };
+    var started = Date.now();
+    var placed = 0;
+    for (var c = 0; c < NC; c++) if (st.cells[c] >= 0) placed++;
+    if (placed === 0 && level > 1) return { move: openingMove(st, moves), depth: 0 };
+
+    if (level <= 1) {
+      // Novice: random, but takes a game-winning move a third of the time.
+      if (Math.random() < 0.33) {
+        for (var i = 0; i < moves.length; i++) {
+          make(st, moves[i]);
+          var none = genMoves(st).length === 0;
+          unmake(st, moves[i]);
+          if (none) return { move: moves[i], depth: 1 };
+        }
+      }
+      return { move: pick(moves), depth: 0 };
+    }
+    var ctx = { nodes: 0, deadline: 0, beams: [999] };
+    if (level === 2) {
+      ctx.beams = [999];
+      var sc = rootSearch(st, 1, moves, ctx, 22);
+      return { move: sc[0][1], depth: 1, score: sc[0][0] };
+    }
+    if (level === 3) {
+      ctx.beams = [999, 999];
+      var root = orderMoves(st, moves, 36, 4);
+      sc = rootSearch(st, 2, root, ctx, 4);
+      return { move: sc[0][1], depth: 2, score: sc[0][0] };
+    }
+    // Expert: iterative deepening alpha-beta with a beam, within a time budget.
+    ctx.beams = [26, 16, 11, 8, 7, 6, 6, 6];
+    ctx.deadline = started + (timeMs || 1600);
+    root = orderMoves(st, moves, 0, 99);
+    var best = root[0], bestScore = 0, reached = 0;
+    for (var d = 1; d <= 9; d++) {
+      try {
+        var list = d >= 2 ? root.slice(0, Math.max(ctx.beams[0], 1)) : root;
+        sc = rootSearch(st, d, list, ctx, 0);
+        best = sc[0][1]; bestScore = sc[0][0]; reached = d;
+        // Reorder by this iteration's scores; keep the rest behind.
+        var ranked = sc.map(function (x) { return x[1]; });
+        var rest = root.filter(function (m) { return ranked.indexOf(m) < 0; });
+        root = ranked.concat(rest);
+        if (Math.abs(bestScore) > WIN / 2) break;
+        if (Date.now() - started > (timeMs || 1600) * 0.45) break;
+      } catch (e) {
+        if (e instanceof Timeout) break;
+        throw e;
+      }
+    }
+    return { move: best, depth: reached, score: bestScore, nodes: ctx.nodes };
+  }
+
+  return {
+    N: N, NC: NC, NEUTRAL: NEUTRAL, NEUTRAL_BIT: NEUTRAL_BIT, CLASSES: CLASSES,
+    OE: OE, OP: OP, OT: OT, OR: OR, orientsOf: orientsOf, NB: NB, EDGE: EDGE, nearTile: nearTile,
+    newState: newState, cloneState: cloneState, genMoves: genMoves, make: make, unmake: unmake,
+    patternAt: patternAt, territory: territory, evaluate: evaluate, chooseMove: chooseMove,
+    LEVELS: LEVELS, popcount: popcount
+  };
+})();
+if (typeof module !== 'undefined') module.exports = Q;
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var P_NAME = ['Light', 'Dark'];
+  var LEVELS = { 1: 'Novice', 2: 'Casual', 3: 'Skilled', 4: 'Expert' };
+  var OPP_SIDE = [2, 3, 0, 1];
+  var SIDE_NAME = ['top', 'right', 'bottom', 'left'];
+  var EDGE_NAME = ['light', 'dark', 'horizontal stripes', 'vertical stripes'];
+  // The printed design sits inside a plain wooden border, as on the real tiles.
+  var TRI = ['6,6 94,6 50,50', '94,6 94,94 50,50', '94,94 6,94 50,50', '6,94 6,6 50,50'];
+  var FILL = ['', 'url(#q-brown)', 'url(#q-h)', 'url(#q-v)'];
+  var BAR = ['<rect x="0" y="0" width="100" height="10"/>', '<rect x="90" y="0" width="10" height="100"/>',
+             '<rect x="0" y="90" width="100" height="10"/>', '<rect x="0" y="0" width="10" height="100"/>'];
+  var RACK_ORDER = [Q.NEUTRAL];
+  for (var i = 0; i < 17; i++) RACK_ORDER.push(i);
+
+  var boardEl = $('#board');
+
+  function edgesOf(o) { return [Q.OE[o * 4], Q.OE[o * 4 + 1], Q.OE[o * 4 + 2], Q.OE[o * 4 + 3]]; }
+  function tileSVG(e, bad) {
+    var s = '<svg class="tsvg" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><rect width="100" height="100" rx="3" fill="url(#q-wood)"/>';
+    for (var i = 0; i < 4; i++) {
+      if (e[i] === 0) continue; // light solid is the bare wood
+      s += '<polygon points="' + TRI[i] + '" fill="' + FILL[e[i]] + '"' + (e[i] === 1 ? ' stroke="url(#q-brown)" stroke-width="0.6"' : '') + '/>';
+    }
+    if (bad) for (i = 0; i < 4; i++) if (bad[i]) s += '<g class="badbar">' + BAR[i] + '</g>';
+    return s + '<rect class="frame" x="0.6" y="0.6" width="98.8" height="98.8" rx="3"/></svg>';
+  }
+  function describe(e, t, p) {
+    if (t === Q.NEUTRAL) return (p === 0 ? 'Concentric squares' : 'The cross') + ', stripes on every side. Goes on an inner square, not touching the other starting tile.';
+    var col = 0, colour = 'light';
+    e.forEach(function (x) { if (x < 2) { col++; colour = P_NAME[x].toLowerCase(); } });
+    return col + ' ' + colour + ' side' + (col > 1 ? 's' : '') + ', ' + (4 - col) + ' striped';
+  }
+  function tileLabel(p, o, t) {
+    var e = edgesOf(o);
+    var name = t === Q.NEUTRAL ? 'Starting tile' : P_NAME[p] + ' tile ' + (t + 1);
+    return name + ': ' + e.map(function (x, s) { return SIDE_NAME[s] + ' ' + EDGE_NAME[x]; }).join(', ');
+  }
+
+  // ---------- Settings ----------
+  var DEFAULTS = { mode: 'ai', level: 2, human: 0, showLegal: true, showTerr: false };
+  function loadSettings() {
+    try {
+      var s = JSON.parse(localStorage.getItem('quads-settings') || '{}');
+      return Object.assign({}, DEFAULTS, s);
+    } catch (e) { return Object.assign({}, DEFAULTS); }
+  }
+  function saveSettings() { try { localStorage.setItem('quads-settings', JSON.stringify(settings)); } catch (e) { /* storage unavailable */ } }
+
+  var settings = loadSettings();
+  var game = null;
+  var ui = { sel: null, pending: -1, hover: -1, hint: -1, hintBusy: false, thinking: false, aiToken: 0, hintToken: 0, anim: -1, note: '', showResult: false, lastPointer: '' };
+
+  // ---------- Worker running the engine ----------
+  var worker = null, reqId = 0, callbacks = {};
+  function initWorker() {
+    try {
+      var src = document.getElementById('quads-engine').textContent +
+        '\nself.onmessage=function(e){var d=e.data;var st={cells:Int16Array.from(d.cells),hand:d.hand.slice(),toMove:d.toMove};' +
+        'var r=Q.chooseMove(st,d.level,d.time);self.postMessage({id:d.id,move:r.move,depth:r.depth});};';
+      worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      worker.onmessage = function (e) {
+        var cb = callbacks[e.data.id];
+        delete callbacks[e.data.id];
+        if (cb) cb.fn(e.data);
+      };
+      worker.onerror = function () {
+        worker = null;
+        Object.keys(callbacks).forEach(function (id) {
+          var cb = callbacks[id]; delete callbacks[id];
+          cb.fn(Q.chooseMove(cb.st, cb.level, cb.time));
+        });
+      };
+    } catch (e) { worker = null; }
+  }
+  function think(st, level, time, fn) {
+    var id = ++reqId, copy = Q.cloneState(st);
+    if (worker) {
+      callbacks[id] = { fn: fn, st: copy, level: level, time: time };
+      worker.postMessage({ id: id, cells: Array.from(copy.cells), hand: copy.hand.slice(), toMove: copy.toMove, level: level, time: time });
+    } else {
+      setTimeout(function () { fn(Q.chooseMove(copy, level, time)); }, 30);
+    }
+  }
+
+  // ---------- Game state ----------
+  function newGame() {
+    game = { mode: settings.mode, human: settings.human, st: Q.newState(), history: [], last: -1, over: null };
+    ui.sel = null; ui.pending = -1; ui.hover = -1; ui.hint = -1; ui.hintBusy = false; ui.thinking = false;
+    ui.aiToken++; ui.hintToken++; ui.note = ''; ui.showResult = false;
+    autoSelectNeutral();
+    render();
+    maybeAI();
+  }
+  function isHumanTurn() { return game.mode === 'friend' || game.st.toMove === game.human; }
+  function canAct() { return !game.over && isHumanTurn(); }
+  function rightP() { return game.mode === 'ai' ? game.human : game.st.toMove; }
+  function hasNeutral(p) { return (game.st.hand[p] & Q.NEUTRAL_BIT) !== 0; }
+  function autoSelectNeutral() {
+    if (canAct() && hasNeutral(game.st.toMove)) ui.sel = { t: Q.NEUTRAL, r: ui.sel && ui.sel.t === Q.NEUTRAL ? ui.sel.r : 0 };
+  }
+  function canUndo() {
+    if (!game.history.length) return false;
+    if (game.mode === 'friend') return true;
+    return game.history.some(function (h) { return h.toMove === game.human; });
+  }
+
+  // Does orientation o fit in cell c? Reports which sides clash and why.
+  function check(o, c) {
+    var st = game.st, touch = false, bad = [false, false, false, false], kind = '';
+    if (st.cells[c] >= 0) return { ok: false, touch: true, bad: bad, kind: 'full' };
+    for (var s = 0; s < 4; s++) {
+      var n = Q.NB[c * 4 + s];
+      if (n < 0 || st.cells[n] < 0) continue;
+      touch = true;
+      var theirs = Q.OE[st.cells[n] * 4 + OPP_SIDE[s]], mine = Q.OE[o * 4 + s];
+      if (theirs !== mine) {
+        bad[s] = true;
+        var k = theirs < 2 && mine < 2 ? 'colours' : theirs >= 2 && mine >= 2 ? 'lines' : 'mix';
+        if (!kind || k === 'mix') kind = k;
+      }
+    }
+    var clash = bad.some(Boolean);
+    if (Q.OT[o] === Q.NEUTRAL && Q.EDGE[c]) return { ok: false, touch: touch, bad: bad, kind: 'edge' };
+    if (Q.OT[o] === Q.NEUTRAL && Q.nearTile(st.cells, c)) return { ok: false, touch: touch, bad: [false, false, false, false], kind: 'near' };
+    var ok = !clash && (touch || Q.OT[o] === Q.NEUTRAL);
+    return { ok: ok, touch: touch, bad: bad, kind: clash ? kind : (ok ? '' : 'alone') };
+  }
+  function reasonFor(ch) {
+    if (ch.kind === 'near') return 'Starting tiles need a one-square gap between them. They can’t touch, not even at a corner.';
+    if (ch.kind === 'edge') return 'Starting tiles can’t go on the edge of the board. Pick one of the 16 inner squares.';
+    if (ch.kind === 'alone') return 'Tiles have to touch a tile that is already on the board.';
+    var lead = 'No rotation of this tile fits here. ';
+    if (ch.kind === 'mix') return lead + 'A solid side can only touch the same colour, never stripes.';
+    if (ch.kind === 'colours') return lead + 'Light and dark sides can never touch.';
+    return lead + 'Stripes have to run the same way across every join.';
+  }
+
+  function applyMove(m) {
+    var st = game.st, by = st.toMove;
+    game.history.push({ cells: Array.from(st.cells), hand: st.hand.slice(), toMove: st.toMove, last: game.last });
+    Q.make(st, m);
+    game.last = m & 63;
+    ui.anim = m & 63;
+    ui.pending = -1; ui.hint = -1; ui.note = '';
+    if (game.mode === 'friend' || (ui.sel && !(st.hand[by] & (1 << ui.sel.t)))) ui.sel = null;
+    if (!Q.genMoves(st).length) { game.over = { winner: by }; ui.showResult = true; }
+    autoSelectNeutral();
+    render();
+    var anim = ui.anim;
+    setTimeout(function () { if (ui.anim === anim) ui.anim = -1; }, 400);
+    maybeAI();
+  }
+
+  function maybeAI() {
+    if (game.over || game.mode !== 'ai' || game.st.toMove === game.human) return;
+    var token = ++ui.aiToken, t0 = Date.now(), level = settings.level;
+    ui.thinking = true;
+    render();
+    think(game.st, level, level === 4 ? 1500 : 800, function (r) {
+      if (token !== ui.aiToken) return;
+      var wait = Math.max(0, 560 - (Date.now() - t0));
+      setTimeout(function () {
+        if (token !== ui.aiToken) return;
+        ui.thinking = false;
+        if (r.move >= 0) applyMove(r.move); else render();
+      }, wait);
+    });
+  }
+
+  function requestHint() {
+    if (!canAct() || ui.hintBusy) return;
+    var token = ++ui.hintToken;
+    ui.hintBusy = true;
+    render();
+    think(game.st, 4, 1200, function (r) {
+      if (token !== ui.hintToken) return;
+      ui.hintBusy = false;
+      if (r.move < 0 || !canAct()) { render(); return; }
+      var o = r.move >> 6, c = r.move & 63, p = game.st.toMove;
+      ui.sel = { t: Q.OT[o], r: Q.orientsOf[p][Q.OT[o]].indexOf(o) };
+      ui.pending = c; ui.hint = r.move;
+      ui.note = ui.lastPointer === 'mouse' ? 'Suggested move shown. Click the square to place it.' : 'Suggested move shown. Tap the square to place it.';
+      render();
+    });
+  }
+
+  function undo() {
+    if (!canUndo()) return;
+    ui.aiToken++; ui.hintToken++;
+    var target = game.history.length - 1;
+    if (game.mode === 'ai') while (target >= 0 && game.history[target].toMove !== game.human) target--;
+    if (target < 0) return;
+    var h = game.history[target];
+    game.history.length = target;
+    game.st = { cells: Int16Array.from(h.cells), hand: h.hand.slice(), toMove: h.toMove };
+    game.last = h.last; game.over = null;
+    ui.sel = null; ui.pending = -1; ui.hint = -1; ui.hintBusy = false; ui.thinking = false; ui.note = ''; ui.showResult = false;
+    autoSelectNeutral();
+    render();
+    maybeAI();
+  }
+
+  // ---------- Input ----------
+  function onCell(c, mouse) {
+    if (!canAct()) return;
+    var st = game.st;
+    if (st.cells[c] >= 0) return;
+    if (!ui.sel) {
+      ui.pending = c;
+      ui.note = 'Now pick a tile from your rack to try it on that square.';
+      render();
+      return;
+    }
+    var list = Q.orientsOf[st.toMove][ui.sel.t], o = list[ui.sel.r], ch = check(o, c);
+    if (ch.ok && (mouse || ui.pending === c)) { applyMove(o * 64 + c); return; }
+    ui.pending = c;
+    if (ch.ok) { ui.note = 'Tap the square again to place the tile.'; render(); return; }
+    var k = -1;
+    for (var i = 0; i < list.length; i++) if (check(list[i], c).ok) { k = i; break; }
+    if (k >= 0) {
+      ui.sel.r = k;
+      ui.note = mouse ? 'Turned to fit. Click again to place it.' : 'Turned to fit. Tap again to place it.';
+    } else {
+      ui.note = reasonFor(ch);
+    }
+    render();
+  }
+
+  function onRack(t) {
+    if (!canAct()) return;
+    var p = game.st.toMove;
+    if (!(game.st.hand[p] & (1 << t))) return;
+    if (hasNeutral(p) && t !== Q.NEUTRAL) { ui.note = 'Place your starting tile first.'; render(); return; }
+    if (ui.sel && ui.sel.t === t) { rotate(); return; }
+    ui.sel = { t: t, r: 0 };
+    ui.hint = -1;
+    ui.note = '';
+    if (ui.pending >= 0) {
+      var list = Q.orientsOf[p][t];
+      for (var i = 0; i < list.length; i++) if (check(list[i], ui.pending).ok) { ui.sel.r = i; break; }
+    }
+    render();
+  }
+
+  function rotate() {
+    if (!ui.sel || !canAct()) return;
+    var n = Q.orientsOf[game.st.toMove][ui.sel.t].length;
+    ui.sel.r = (ui.sel.r + 1) % n;
+    ui.hint = -1;
+    render();
+  }
+
+  boardEl.addEventListener('pointerdown', function (e) { ui.lastPointer = e.pointerType; });
+  boardEl.addEventListener('pointerover', function (e) {
+    if (e.pointerType !== 'mouse') return;
+    var b = e.target.closest('.cell');
+    if (!b) return;
+    var c = +b.dataset.c;
+    if (c === ui.hover) return;
+    ui.hover = c;
+    if (ui.pending !== c) ui.pending = -1;
+    renderBoard();
+  });
+  boardEl.addEventListener('pointerleave', function (e) {
+    if (e.pointerType !== 'mouse' || ui.hover < 0) return;
+    ui.hover = -1;
+    renderBoard();
+  });
+  boardEl.addEventListener('click', function (e) {
+    var b = e.target.closest('.cell');
+    if (b) onCell(+b.dataset.c, ui.lastPointer === 'mouse');
+    ui.lastPointer = '';
+  });
+  $('#r-tray').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-t]');
+    if (b && !b.disabled) onRack(+b.dataset.t);
+  });
+  $('#hand-tile').addEventListener('click', rotate);
+  $('#btn-rotate').addEventListener('click', rotate);
+  $('#btn-hint').addEventListener('click', requestHint);
+  $('#btn-undo').addEventListener('click', undo);
+  $('#btn-new').addEventListener('click', newGame);
+  $('#btn-again').addEventListener('click', newGame);
+  $('#btn-review').addEventListener('click', function () { ui.showResult = false; render(); });
+  $('#opt-legal').addEventListener('change', function (e) { settings.showLegal = e.target.checked; saveSettings(); render(); });
+  $('#opt-terr').addEventListener('change', function (e) { settings.showTerr = e.target.checked; saveSettings(); render(); });
+  function bindSeg(id, key, parse) {
+    $(id).addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-v]');
+      if (!b) return;
+      settings[key] = parse(b.dataset.v);
+      saveSettings();
+      if (game.history.length === 0 && key !== 'level') newGame(); else render();
+    });
+  }
+  bindSeg('#seg-mode', 'mode', String);
+  bindSeg('#seg-level', 'level', Number);
+  bindSeg('#seg-side', 'human', Number);
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'r' || e.key === 'R') { rotate(); e.preventDefault(); }
+    else if (e.key === 'Escape') { ui.pending = -1; ui.hint = -1; ui.note = ''; if (!(canAct() && hasNeutral(game.st.toMove))) ui.sel = null; render(); }
+  });
+
+  // ---------- Rendering ----------
+  function keepFocus(container, attr, fn) {
+    var a = document.activeElement, key = null;
+    if (a && container.contains(a) && a.getAttribute(attr) !== null) key = a.getAttribute(attr);
+    fn();
+    if (key !== null) {
+      var el = container.querySelector('[' + attr + '="' + key + '"]');
+      if (el && !el.disabled) el.focus({ preventScroll: true });
+    }
+  }
+
+  function ghostCell() {
+    if (!ui.sel || !canAct()) return -1;
+    if (ui.pending >= 0) return ui.pending;
+    return ui.hover;
+  }
+
+  function renderBoard() {
+    var st = game.st, me = rightP(), them = me ^ 1;
+    var terr = settings.showTerr && !game.over ? Q.territory(st) : null;
+    var selList = ui.sel && canAct() ? Q.orientsOf[st.toMove][ui.sel.t] : null;
+    var gc = ghostCell(), html = '';
+    for (var c = 0; c < Q.NC; c++) {
+      var o = st.cells[c], cls = ['cell'], inner = '', label;
+      var rc = 'Row ' + ((c / 6 | 0) + 1) + ', column ' + (c % 6 + 1);
+      if (o >= 0) {
+        cls.push('filled');
+        inner = '<div class="tile' + (c === ui.anim ? ' drop' : '') + '">' + tileSVG(edgesOf(o)) + '</div>';
+        if (c === game.last) cls.push('last', Q.OP[o] === me ? 'last-me' : 'last-them');
+        label = rc + ': ' + tileLabel(Q.OP[o], o, Q.OT[o]);
+      } else {
+        label = rc + ', empty';
+        if (terr) {
+          var a = terr.can[me][c], b = terr.can[them][c];
+          if (a && b) cls.push('t-both'); else if (a) cls.push('t-me'); else if (b) cls.push('t-them');
+        }
+        if (selList && settings.showLegal) {
+          for (var i = 0; i < selList.length; i++) if (check(selList[i], c).ok) { cls.push('can'); break; }
+        }
+        if (c === ui.pending && !ui.sel && canAct()) cls.push('pend');
+        if (ui.hint >= 0 && c === (ui.hint & 63)) cls.push('hinted');
+        if (c === gc && selList) {
+          var go = selList[ui.sel.r], ch = check(go, c);
+          inner = '<div class="ghost ' + (ch.ok ? 'ok' : 'bad') + (ui.hint === go * 64 + c ? ' hint' : '') + '">' + tileSVG(edgesOf(go), ch.ok ? null : ch.bad) + '</div>';
+        }
+      }
+      html += '<button type="button" class="' + cls.join(' ') + '" data-c="' + c + '" aria-label="' + label + '">' + inner + '</button>';
+    }
+    boardEl.classList.toggle('wait', !canAct());
+    keepFocus(boardEl, 'data-c', function () { boardEl.innerHTML = html; });
+  }
+
+  function trayHTML(p, interactive) {
+    var hand = game.st.hand[p], act = interactive && canAct() && game.st.toMove === p;
+    return RACK_ORDER.map(function (t) {
+      if (!(hand & (1 << t))) return '<span class="rt used" aria-hidden="true"></span>';
+      var sel = interactive && ui.sel && ui.sel.t === t && act;
+      var o = Q.orientsOf[p][t][sel ? ui.sel.r : 0];
+      if (!interactive) return '<span class="rt" role="img" aria-label="' + tileLabel(p, o, t) + '">' + tileSVG(edgesOf(o)) + '</span>';
+      var locked = (hand & Q.NEUTRAL_BIT) && t !== Q.NEUTRAL;
+      return '<button type="button" class="rt' + (sel ? ' sel' : '') + (locked ? ' locked' : '') + '" data-t="' + t + '"' +
+        (!act || locked ? ' disabled' : '') + ' aria-pressed="' + (sel ? 'true' : 'false') + '" aria-label="' + tileLabel(p, o, t) + '">' +
+        tileSVG(edgesOf(o)) + '</button>';
+    }).join('');
+  }
+
+  function statsHTML(p, terr, onlyLabel) {
+    return '<div class="stat"><b>' + Q.popcount(game.st.hand[p]) + '</b><span>Tiles</span></div>' +
+      '<div class="stat"><b>' + terr.counts[p] + '</b><span>Can fill</span></div>' +
+      '<div class="stat"><b>' + terr.only[p] + '</b><span>' + onlyLabel + '</span></div>';
+  }
+
+  function renderSeats() {
+    var st = game.st, me = rightP(), them = me ^ 1, ai = game.mode === 'ai';
+    var terr = Q.territory(st);
+    $('#r-chip').className = 'chip ' + (me ? 'dark' : 'light');
+    $('#l-chip').className = 'chip ' + (them ? 'dark' : 'light');
+    $('#r-name').textContent = ai ? 'You' : P_NAME[me] + (game.over ? '' : ' to play');
+    $('#r-sub').textContent = P_NAME[me] + (me === 0 ? ' · moves first' : ' · moves second');
+    $('#l-name').textContent = ai ? 'Computer' : P_NAME[them];
+    $('#l-sub').textContent = ai ? P_NAME[them] + ' · Level ' + settings.level + ' ' + LEVELS[settings.level] : P_NAME[them] + ' · waiting';
+    $('#l-thinking').hidden = !ui.thinking;
+    $('#r-stats').innerHTML = statsHTML(me, terr, ai ? 'Only you' : 'Only ' + P_NAME[me].toLowerCase());
+    $('#l-stats').innerHTML = statsHTML(them, terr, ai ? 'Only them' : 'Only ' + P_NAME[them].toLowerCase());
+    $('#l-tray').innerHTML = trayHTML(them, false);
+    var rt = $('#r-tray');
+    keepFocus(rt, 'data-t', function () { rt.innerHTML = trayHTML(me, true); });
+    $('.seat-right').setAttribute('aria-label', ai ? 'Your tiles' : P_NAME[me] + "'s tiles");
+    $('.seat-left').setAttribute('aria-label', ai ? "Computer's tiles" : P_NAME[them] + "'s tiles");
+    $('.tray-label').textContent = ai ? 'Your rack' : P_NAME[me] + "'s rack";
+  }
+
+  function renderHand() {
+    var act = canAct(), p = game.st.toMove, ht = $('#hand-tile');
+    if (!ui.sel || !act) {
+      ht.innerHTML = '';
+      ht.disabled = true;
+      $('#hand-title').textContent = 'No tile in hand';
+      $('#hand-desc').textContent = game.over ? 'The game is over.' : act ? 'Pick a tile from your rack, or tap a square first.' : 'Waiting for the computer.';
+      $('#btn-rotate').disabled = true;
+      return;
+    }
+    var list = Q.orientsOf[p][ui.sel.t], o = list[ui.sel.r];
+    ht.innerHTML = tileSVG(edgesOf(o));
+    ht.disabled = list.length < 2;
+    $('#hand-title').textContent = ui.sel.t === Q.NEUTRAL ? 'Starting tile' : 'Tile ' + (ui.sel.t + 1) + ' of 17';
+    $('#hand-desc').textContent = describe(edgesOf(o), ui.sel.t, p) + (list.length < 2 ? '' : ' · ' + list.length + ' rotations');
+    $('#btn-rotate').disabled = list.length < 2;
+  }
+
+  function statusText() {
+    var st = game.st, p = st.toMove, ai = game.mode === 'ai';
+    if (game.over) {
+      var w = game.over.winner;
+      if (ai) return w === game.human ? 'You win. The computer has nowhere left to play.' : 'The computer wins. None of your tiles fit an open square.';
+      return P_NAME[w] + ' wins. ' + P_NAME[w ^ 1] + ' has nowhere left to play.';
+    }
+    if (ai && p !== game.human) return ui.thinking ? 'The computer is thinking…' : "Computer's turn.";
+    var who = ai ? 'Your turn' : P_NAME[p] + ' to play';
+    if (hasNeutral(p)) return who + (game.history.length ? '. Place your starting tile on an inner square with a gap from the other one.' : '. Place your starting tile on any square away from the edge.');
+    return who + '. Place a tile next to one on the board.';
+  }
+
+  function renderControls() {
+    [['#seg-mode', settings.mode], ['#seg-level', String(settings.level)], ['#seg-side', String(settings.human)]].forEach(function (x) {
+      $(x[0]).querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.v === String(x[1]) ? 'true' : 'false'); });
+    });
+    $('#level-name').textContent = LEVELS[settings.level];
+    $('#ctl-level').hidden = settings.mode !== 'ai';
+    $('#ctl-side').hidden = settings.mode !== 'ai';
+    $('#queued').hidden = !(settings.mode !== game.mode || (settings.mode === 'ai' && settings.human !== game.human));
+    $('#opt-legal').checked = settings.showLegal;
+    $('#opt-terr').checked = settings.showTerr;
+    $('#btn-hint').disabled = !canAct() || ui.hintBusy;
+    $('#btn-hint').textContent = ui.hintBusy ? 'Thinking…' : 'Hint';
+    $('#btn-undo').disabled = !canUndo();
+    var ai = game.mode === 'ai';
+    $('#lg-me').textContent = ai ? 'Only you can fill' : 'Only ' + P_NAME[rightP()] + ' can fill';
+    $('#lg-them').textContent = ai ? 'Only the computer' : 'Only ' + P_NAME[rightP() ^ 1];
+    $('#legend').hidden = !settings.showTerr || !!game.over;
+  }
+
+  function renderResult() {
+    var show = !!game.over && ui.showResult;
+    $('#result').hidden = !show;
+    if (!show) return;
+    var w = game.over.winner, ai = game.mode === 'ai';
+    $('#result-title').textContent = ai ? (w === game.human ? 'You win' : 'You lose') : P_NAME[w] + ' wins';
+    var moves = game.history.length;
+    $('#result-sub').textContent = ai
+      ? (w === game.human ? 'The computer had no legal square after ' + moves + ' tiles. Try level ' + Math.min(4, settings.level + 1) + (settings.level === 4 ? ' again' : ' next') + '.'
+                          : 'You had no tile that fit an open square after ' + moves + ' tiles. Undo to try another line.')
+      : P_NAME[w ^ 1] + ' had no legal square after ' + moves + ' tiles.';
+  }
+
+  function render() {
+    renderControls();
+    renderSeats();
+    renderHand();
+    renderBoard();
+    renderResult();
+    $('#status').textContent = statusText();
+    var empty = 0;
+    for (var c = 0; c < Q.NC; c++) if (game.st.cells[c] < 0) empty++;
+    $('#moveno').textContent = 'Move ' + (game.history.length + (game.over ? 0 : 1)) + ' · ' + empty + ' empty';
+    $('#note').textContent = ui.note;
+  }
+
+  // ---------- Join examples in the rules ----------
+  (function joins() {
+    var ex = [
+      { a: [1, 2, 3, 1], b: [0, 3, 2, 2], ok: true, text: 'Stripes meet stripes running the same way. Light and Dark can both join this way.' },
+      { a: [3, 1, 2, 1], b: [1, 2, 3, 1], ok: true, text: 'Dark meets dark. Only Dark can fill a square that a dark side faces.' },
+      { a: [1, 2, 1, 3], b: [0, 0, 3, 3], ok: false, text: 'Stripes that cross at the join do not match.' },
+      { a: [2, 1, 3, 1], b: [0, 3, 0, 2], ok: false, text: 'A solid side can never touch stripes.' },
+      { a: [2, 1, 1, 3], b: [0, 2, 3, 0], ok: false, text: 'Light and dark never touch.' }
+    ];
+    $('#joins').innerHTML = ex.map(function (x) {
+      return '<div class="join"><div class="pair"><div class="pair-tiles">' + tileSVG(x.a) + tileSVG(x.b) + '</div>' +
+        '<span class="verdict ' + (x.ok ? 'yes' : 'no') + '">' + (x.ok ? 'Fits' : 'Clash') + '</span></div><div>' + x.text + '</div></div>';
+    }).join('');
+  })();
+
+  // ---------- Boot, with state kept across live updates ----------
+  function snapshot() {
+    return {
+      settings: settings,
+      v: 2,
+      game: game && { mode: game.mode, human: game.human, cells: Array.from(game.st.cells), hand: game.st.hand.slice(), toMove: game.st.toMove, history: game.history, last: game.last, over: game.over }
+    };
+  }
+  function start(data) {
+    initWorker();
+    data = data || {};
+    if (data.settings) settings = Object.assign({}, DEFAULTS, data.settings);
+    var g = data.v === 2 ? data.game : null;
+    if (g && g.cells) {
+      game = { mode: g.mode, human: g.human, st: { cells: Int16Array.from(g.cells), hand: g.hand.slice(), toMove: g.toMove }, history: g.history || [], last: g.last, over: g.over };
+      ui.showResult = !!g.over;
+      autoSelectNeutral();
+      render();
+      maybeAI();
+    } else {
+      newGame();
+    }
+  }
+  var hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) { try { hot.snapshot(snapshot); } catch (e) { /* not supported */ } }
+  if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
